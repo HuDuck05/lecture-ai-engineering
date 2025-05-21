@@ -12,6 +12,8 @@ import time
 import great_expectations as gx
 
 
+print(f"🧭 Current working directory: {os.getcwd()}")
+print(f"📁 Titanic.csv exists: {os.path.exists('data/Titanic.csv')}")
 class DataLoader:
     """データロードを行うクラス"""
 
