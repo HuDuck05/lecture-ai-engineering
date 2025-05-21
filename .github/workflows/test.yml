@@ -11,7 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
+
+    - name: 🔍 Show working directory and contents
+      run: |
+        echo "Current directory: $(pwd)"
+        echo "Files in working directory:"
+        ls -R
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
