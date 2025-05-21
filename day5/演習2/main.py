@@ -11,6 +11,11 @@ import pickle
 import time
 import great_expectations as gx
 
+
+print(f"🧭 Current working directory: {os.getcwd()}")
+print(f"📁 Titanic.csv exists: {os.path.exists('data/Titanic.csv')}")
+
+
 class DataLoader:
     """データロードを行うクラス"""
 
@@ -20,10 +25,13 @@ class DataLoader:
         if path:
             return pd.read_csv(path)
         else:
-            # ローカルのファイル
-            local_path = "data/Titanic.csv"
+            base_dir = os.path.dirname(__file__)
+            local_path = os.path.join(base_dir, "data", "Titanic.csv")
             if os.path.exists(local_path):
                 return pd.read_csv(local_path)
+            else:
+                print(f"Error: File not found: {local_path}")
+                return None
 
     @staticmethod
     def preprocess_titanic_data(data):
@@ -248,6 +256,37 @@ def test_model_performance():
     ), f"推論時間が長すぎます: {metrics['inference_time']}秒"
 
 
+def test_prediction_confidence_spread():
+    """予測の確信度が極端すぎないかをチェック"""
+    data = DataLoader.load_titanic_data()
+    X, y = DataLoader.preprocess_titanic_data(data)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # パイプラインで学習
+    model = Pipeline(
+        steps=[
+            ("preprocessor", ModelTester.create_preprocessing_pipeline()),
+            ("classifier", RandomForestClassifier(n_estimators=100, random_state=42)),
+        ]
+    )
+    model.fit(X_train, y_train)
+
+    # クラス1の確信度を取得
+    proba = model.predict_proba(X_test)[:, 1]
+
+    high_conf = sum(proba > 0.95) / len(proba)
+    low_conf = sum(proba < 0.05) / len(proba)
+
+    print(
+        f"確信度95%以上の予測割合: {high_conf:.2%}, 確信度5%未満の予測割合: {low_conf:.2%}"
+    )
+
+    assert high_conf < 0.8, "高すぎる確信度の予測が0.8以上です"
+    assert low_conf < 0.8, "低すぎる確信度の予測が0.8以上です"
+
+
 if __name__ == "__main__":
     # データロード
     data = DataLoader.load_titanic_data()
@@ -285,3 +324,5 @@ if __name__ == "__main__":
     # ベースラインとの比較
     baseline_ok = ModelTester.compare_with_baseline(metrics)
     print(f"ベースライン比較: {'合格' if baseline_ok else '不合格'}")
+
+    test_prediction_confidence_spread()
